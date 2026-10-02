@@ -1,0 +1,49 @@
+services:
+  # Сервис базы данных MySQL
+  mysql:
+    # Используем официальный образ MySQL 8.0
+    image: mysql:8.0
+    # Контейнер будет автоматически перезапускаться, если он остановился или упал
+    restart: unless-stopped
+    environment:
+      # Обязательные переменные окружения для MySQL
+      MYSQL_ROOT_PASSWORD: root       # Пароль для root-пользователя
+      MYSQL_DATABASE: my_database     # Имя базы данных, которая будет создана автоматически
+      MYSQL_USER: my_user             # Имя дополнительного пользователя
+      MYSQL_PASSWORD: my_password     # Пароль для дополнительного пользователя
+    ports:
+      # Пробрасываем порт 3306 хоста на порт 3306 в контейнере
+      - "3306:3306"
+    volumes:
+      # Сохраняем данные базы данных в Docker-томе для персистентности
+      - mysql_data:/var/lib/mysql
+    networks:
+      - mysql-pma-network
+
+  # Сервис phpMyAdmin
+  phpmyadmin:
+    # Зависит от сервиса mysql, запустится после его готовности
+    depends_on:
+      - mysql
+    # Используем официальный образ phpMyAdmin
+    image: phpmyadmin/phpmyadmin:latest
+    # Пробрасываем порт 8083 на хосте на порт 80 в контейнере
+    ports:
+      - "8083:80"
+    restart: unless-stopped
+    environment:
+      # Переменные для подключения к серверу базы данных
+      PMA_HOST: mysql        # Имя хоста MySQL-сервера (совпадает с именем сервиса)
+      PMA_PORT: 3306         # Порт MySQL-сервера
+      PMA_ARBITRARY: 1       # Разрешает подключаться к произвольному серверу, не только к mysql (полезно для отладки)
+      UPLOAD_LIMIT: 300M     # Увеличивает лимит на загрузку файлов (для больших SQL-дампов)
+    networks:
+      - mysql-pma-network
+
+# Определяем общую сеть для связи контейнеров
+networks:
+  mysql-pma-network:
+
+# Определяем Docker-том для хранения данных базы данных
+volumes:
+  mysql_data:
